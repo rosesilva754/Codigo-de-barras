@@ -1,0 +1,132 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Leitor de Código de Barras</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #f2f2f2;
+    }
+    #scanner-container {
+      width: 100%;
+      max-width: 400px;
+      margin: 0 auto;
+      display: none;
+    }
+    #product-info {
+      margin-top: 20px;
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    button {
+      margin-top: 10px;
+      padding: 10px 15px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+  </style>
+</head>
+<body>
+  <h1>Consulta de Produtos por Código de Barras</h1>
+  <button onclick="startScanner()">Escanear Código de Barras</button>
+  <div id="scanner-container">
+    <div id="scanner" style="width: 100%; height: 300px;"></div>
+    <button onclick="stopScanner()">Parar Scanner</button>
+  </div>
+
+  <p>Ou digite o código de barras:</p>
+  <input type="text" id="manual-code" placeholder="Digite o código">
+  <button onclick="buscarProdutoManual()">Buscar Produto</button>
+
+  <div id="product-info"></div>
+
+  <script>
+    function startScanner() {
+      document.getElementById('scanner-container').style.display = 'block';
+
+      Quagga.init({
+        inputStream: {
+          type: 'LiveStream',
+          constraints: {
+            facingMode: 'environment'
+          },
+          target: document.querySelector('#scanner')
+        },
+        decoder: {
+          readers: ['ean_reader']
+        }
+      }, function(err) {
+        if (err) {
+          console.error(err);
+          return;
+        }
+        Quagga.start();
+      });
+
+      Quagga.onDetected(function(data) {
+        let code = data.codeResult.code;
+        stopScanner();
+        buscarProduto(code);
+      });
+    }
+
+    function stopScanner() {
+      Quagga.stop();
+      document.getElementById('scanner-container').style.display = 'none';
+    }
+
+    function buscarProdutoManual() {
+      const code = document.getElementById('manual-code').value;
+      if (code) buscarProduto(code);
+    }
+
+    function buscarProduto(gtin) {
+      document.getElementById('product-info').innerHTML = '<p>Buscando informações...</p>';
+
+      // Simulação da consulta à API da GS1 Brasil / CCGTIN
+      // Substituir URL abaixo por uma real com sua chave de API se necessário
+      const url = `https://api.exemplo.com/gtin/${gtin}`;
+
+      fetch(url)
+        .then(res => res.json())
+        .then(data => {
+          if (!data || !data.nome) {
+            document.getElementById('product-info').innerHTML = '<p>Produto não encontrado.</p>';
+            return;
+          }
+
+          document.getElementById('product-info').innerHTML = `
+            <h2>${data.nome}</h2>
+            <p><strong>Marca:</strong> ${data.marca}</p>
+            <p><strong>Ingredientes:</strong> ${data.ingredientes || 'Não informado'}</p>
+            <p><strong>Composição:</strong> ${data.composicao || 'Não informado'}</p>
+            <p><strong>Validade:</strong> ${data.validade || 'Não informada'}</p>
+          `;
+        })
+        .catch(err => {
+          console.error(err);
+          document.getElementById('product-info').innerHTML = '<p>Erro ao buscar produto.</p>';
+        });
+    }
+  </script>
+</body>
+</html>
